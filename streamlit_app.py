@@ -15,29 +15,66 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-.stApp {background:#f8fafc;direction:rtl}
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap');
+html,body,[class*="css"],.stApp {font-family:'Cairo',Tahoma,sans-serif}
+.stApp {background:#f7fafb;direction:rtl;color:#143044}
+.block-container {max-width:1480px;padding-top:1.4rem;padding-bottom:3rem}
 h1,h2,h3,p,label {text-align:right}
-.hero {
-    background:linear-gradient(115deg,#064e3b,#047857);
-    color:white;padding:30px;border-radius:18px;
-    text-align:center;margin-bottom:22px
-}
-.hero h1 {color:white;text-align:center}
-.hero p {color:#d1fae5;text-align:center}
-[data-testid="stMetric"] {
-    background:white;padding:15px;border-radius:12px;
-    border:1px solid #e2e8f0
-}
+h1,h2,h3 {color:#123f4a;letter-spacing:-.4px}
+[data-testid="stSidebar"] {background:linear-gradient(180deg,#073c46,#087e86 75%,#0b9e9f);direction:rtl}
+[data-testid="stSidebar"] * {color:#fff!important}
+[data-testid="stSidebar"] button {border-radius:14px}
+[data-testid="stSidebar"] [data-testid="stFileUploader"] {border:1px solid #b9f0ec;border-radius:14px;padding:10px}
+.hero {position:relative;overflow:hidden;background:linear-gradient(105deg,#063e49 0%,#076f78 65%,#12a7a6 100%);color:white;padding:35px 36px;border-radius:25px;margin-bottom:25px;box-shadow:0 16px 38px rgba(7,74,81,.13);min-height:175px}
+.hero:after {content:"";position:absolute;width:240px;height:240px;border:2px solid #ffffff20;border-radius:50%;top:-130px;left:-50px}
+.hero h1 {color:white;text-align:right;font-size:clamp(24px,2.4vw,38px);font-weight:800;margin:0 0 8px}
+.hero p {color:#d9f7f5;text-align:right;font-size:15px;margin:3px 0}
+.hero .tag {display:inline-block;border:1px solid #ffffff65;background:#ffffff1c;color:white;border-radius:20px;padding:4px 14px;margin-bottom:14px}
+.school-photo {width:100%;height:190px;object-fit:cover;border-radius:20px;box-shadow:0 10px 24px #164e6320}
+.section-head {border-right:5px solid #10a7a7;padding:8px 16px;background:white;border-radius:12px;margin:18px 0 12px;font-size:21px;font-weight:800;color:#104c59}
+[data-testid="stMetric"] {background:white;padding:18px;border-radius:19px;border:1px solid #dcecee;box-shadow:0 5px 22px #174d5810;min-height:125px}
+[data-testid="stMetricLabel"] {font-weight:700;color:#45656c}
+[data-testid="stMetricValue"] {color:#066e79;font-size:30px;font-weight:800}
+div[data-testid="stVerticalBlockBorderWrapper"]>div {border-radius:18px}
+[data-testid="stFileUploader"] {background:white;border:1px dashed #81c8c9;border-radius:16px;padding:10px}
+[data-testid="stDataFrame"] {background:white;border-radius:16px;overflow:hidden;border:1px solid #deebee}
+[data-testid="stTabs"] button {font-weight:700}
+.stButton>button[kind="primary"],.stDownloadButton>button[kind="primary"] {background:linear-gradient(100deg,#087a82,#0aa4a6);color:white;border:0;border-radius:13px;padding:11px 18px;font-weight:800}
+.stButton>button:hover,.stDownloadButton>button:hover {border-color:#0ba5a6}
+[data-testid="stAlert"] {border-radius:14px}
 </style>
 """, unsafe_allow_html=True)
 
+with st.sidebar:
+    st.markdown("## 🏫 لوحة التحكم")
+    st.caption("الابتدائية 111 | 1448هـ")
+    st.markdown("### 🖼️ صورة المدرسة")
+    photo_upload = st.file_uploader("ارفعي الصورة الأصلية للمدرسة", type=["jpg","jpeg","png"], key="school_photo")
+    st.caption("لإظهار الصورة دائمًا، يمكن إضافة ملف school.jpg إلى مستودع GitHub.")
+    st.markdown("---")
+    st.markdown("**📊 المجالات الأربعة**")
+    st.markdown("🏛️ الإدارة المدرسية")
+    st.markdown("📚 التعليم والتعلم")
+    st.markdown("🎓 نواتج التعلم")
+    st.markdown("🛡️ البيئة المدرسية")
+    st.markdown("---")
+    st.caption("محلل التقويم المدرسي الذكي • إصدار 1448هـ")
+
 st.markdown("""
 <div class="hero">
-<h1>📊 محلل التقويم المدرسي الذكي</h1>
-<p>الطفولة المبكرة بالابتدائية الحادية عشرة بعد المائة</p>
-<p>مقارنة التقويم الذاتي والخارجي وتحليل مؤشرات الأداء</p>
+<div class="tag">✦ لوحة المؤشرات الذكية | 1448هـ</div>
+<h1>محلل التقويم المدرسي الذكي</h1>
+<p>الطفولة المبكرة بالابتدائية الحادية عشرة بعد المائة — ب/111</p>
+<p>مقارنة دقيقة بين التقويم الذاتي والخارجي • رسوم بيانية • أولويات التحسين</p>
 </div>
 """, unsafe_allow_html=True)
+
+if photo_upload is not None:
+    st.image(photo_upload, caption="الصورة الأصلية للابتدائية 111", use_container_width=True)
+else:
+    from pathlib import Path
+    if Path("school.jpg").exists():
+        st.image("school.jpg", caption="الابتدائية 111", use_container_width=True)
 
 # تحويل الأرقام العربية إلى الإنجليزية
 TRANS = str.maketrans(
@@ -239,7 +276,7 @@ def excel_file(df, summary):
                 )
     return output.getvalue()
 
-st.subheader("📁 رفع تقريري التقويم المدرسي")
+st.markdown('<div class="section-head">📁 رفع تقريري التقويم المدرسي</div>', unsafe_allow_html=True)
 
 left, right = st.columns(2)
 with left:
@@ -334,7 +371,7 @@ if "self_data" in st.session_state:
     comparison = compare_reports(edited_self, edited_ext)
 
     st.divider()
-    st.subheader("📊 لوحة مقارنة النتائج")
+    st.markdown('<div class="section-head">📊 لوحة مقارنة النتائج</div>', unsafe_allow_html=True)
 
     matched = comparison["الفرق بالنقاط"].notna()
     improved = (comparison["الحالة"] == "ارتفاع").sum()
@@ -356,19 +393,32 @@ if "self_data" in st.session_state:
         .round(2)
     )
 
-    st.subheader("مقارنة المجالات الأربعة")
-    st.bar_chart(
-        domain_summary.set_index("المجال")[
-            ["الخارجي %", "الذاتي %"]
-        ]
+    st.markdown('<div class="section-head">📈 مقارنة المجالات الأربعة</div>', unsafe_allow_html=True)
+    import plotly.graph_objects as go
+    fig = go.Figure()
+    for label, color in [("الخارجي %", "#1a5665"), ("الذاتي %", "#17b8b0")]:
+        fig.add_trace(go.Bar(
+            name=label, x=domain_summary["المجال"],
+            y=domain_summary[label], marker_color=color,
+            text=domain_summary[label].map(lambda v: f"{v:.1f}%"),
+            textposition="outside", textfont=dict(size=14)
+        ))
+    fig.update_layout(
+        barmode="group", template="plotly_white", height=400,
+        margin=dict(l=25,r=25,t=40,b=25), font=dict(family="Cairo, Tahoma"),
+        legend=dict(orientation="h",y=1.13,x=0.35),
+        yaxis=dict(title="النسبة المئوية",range=[0,110]),
+        xaxis=dict(title=""),paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)"
     )
+    st.plotly_chart(fig, use_container_width=True)
 
     st.caption(
         "متوسطات المجالات في هذا الرسم محسوبة من المؤشرات "
         "المستخرجة، وليست بالضرورة الدرجات الرسمية للمجالات."
     )
 
-    st.subheader("📋 جدول المقارنة والتحليل")
+    st.markdown('<div class="section-head">📋 جدول المقارنة والتحليل</div>', unsafe_allow_html=True)
 
     selected = st.selectbox(
         "اختاري المجال",
@@ -412,12 +462,12 @@ if "self_data" in st.session_state:
     ]
 
     st.dataframe(
-        view[display_columns],
+        view[display_columns].round(2),
         use_container_width=True,
         hide_index=True
     )
 
-    st.subheader("🎯 أولويات التحسين")
+    st.markdown('<div class="section-head">🎯 أولويات التحسين</div>', unsafe_allow_html=True)
 
     priorities = comparison[
         comparison["الخارجي %"].notna()
@@ -439,7 +489,7 @@ if "self_data" in st.session_state:
         "طريقة القياس أو الأدلة أو تاريخ التقييم."
     )
 
-    st.subheader("📥 تصدير النتائج")
+    st.markdown('<div class="section-head">📥 تصدير النتائج</div>', unsafe_allow_html=True)
 
     excel = excel_file(comparison, domain_summary)
 
