@@ -49,31 +49,61 @@ def domain(code):
     return dict(zip("1234", DOMAINS)).get(str(code)[:1], "غير محدد")
 
 def parse_pdf(file):
+    """Conservative extraction: page text plus spatially aligned PDF words.
+
+    Never guess a percentage from a neighbouring indicator or another page.
+    Scanned pages are flagged for manual review.
+    """
     doc = fitz.open(stream=file.getvalue(), filetype="pdf")
     records, weak = [], []
+    pct = re.compile(r"(?<!\\d)(\\d{1,3}(?:\\.\\d+)?)\\s*%|%\\s*(\\d{1,3}(?:\\.\\d+)?)")
+    code_pattern = re.compile(r"(?<!\\d)([1-4][-–]\\d{1,2}[-–]\\d{1,2}[-–]\\d{1,2})(?!\\d)")
     for n, page in enumerate(doc, 1):
         raw = clean(page.get_text(sort=True))
         if len(raw.strip()) < 60:
             weak.append(n)
-        lines = [re.sub(r"\s+", " ", x).strip() for x in raw.splitlines() if x.strip()]
-        for i, line in enumerate(lines):
-            code = norm_code(line)
-            if not code:
+            continue
+        # Read text by geometric line rather than by arbitrary PDF text order.
+        words = page.get_text("words", sort=True)
+        lines = {}
+        for x0,y0,x1,y1,w,block,line,word in words:
+            lines.setdefault((block,line), []).append((x0,y0,x1,y1,clean(w)))
+        ordered = []
+        for parts in lines.values():
+            parts.sort(key=lambda z:z[0])
+            line_text = " ".join(z[4] for z in parts)
+            ordered.append((min(z[1] for z in parts),max(z[3] for z in parts),line_text))
+        ordered.sort(key=lambda x:x[0])
+        # Require an unambiguous code and an unambiguous percentage
+        # on the same visual line, or in its immediately adjacent line.
+        for i,(top,bottom,line_text) in enumerate(ordered):
+            codes = [norm_code(m.group(0).replace("–","-")) for m in code_pattern.finditer(line_text)]
+            codes = [v for v in codes if v]
+            if len(codes)!=1:
                 continue
-            # Avoid assigning nearby percentages to the wrong indicator.
-            # Only accept percentages on the same extracted line.
-            values = re.findall(r"(?<!\d)(\d{1,3}(?:\.\d+)?)\s*%|%\s*(\d{1,3}(?:\.\d+)?)", line)
-            vals = [float(a or b) for a,b in values if float(a or b) <= 100]
-            if len(vals) != 1:
+            nearby=[line_text]
+            if i+1<len(ordered) and ordered[i+1][0]-bottom<16:
+                nearby.append(ordered[i+1][2])
+            options=[]
+            for candidate in nearby:
+                values=[float(x or y) for x,y in pct.findall(candidate)]
+                values=[v for v in values if 0<=v<=100]
+                if len(values)==1:
+                    options.append((candidate,values[0]))
+            # A value is accepted only when unique in the small visual neighbourhood.
+            unique=set(v for _,v in options)
+            if len(unique)!=1:
                 continue
-            name = re.sub(r"(?<!\d)[1-4]-\d{1,2}-\d{1,2}-\d{1,2}(?!\d)", "", line)
-            name = re.sub(r"\d{1,3}(?:\.\d+)?\s*%|%\s*\d{1,3}(?:\.\d+)?", "", name).strip(" -:")
-            records.append({"رمز المؤشر":code,"اسم المؤشر":name[:180],"النسبة":vals[0],"الصفحة":n})
+            candidate,value=options[0]
+            name=code_pattern.sub("",line_text)
+            name=pct.sub("",name).strip(" -:")
+            records.append({"رمز المؤشر":codes[0],"اسم المؤشر":name[:180],
+                            "النسبة":value,"الصفحة":n})
     doc.close()
-    return pd.DataFrame(records, columns=["رمز المؤشر","اسم المؤشر","النسبة","الصفحة"]), weak
+    return pd.DataFrame(records,columns=["رمز المؤشر","اسم المؤشر","النسبة","الصفحة"]),weak
 
 def starter():
-    return pd.DataFrame([{"رمز المؤشر":"","اسم المؤشر":"","النسبة":None,"الصفحة":None}])
+    return pd.DataFrame(columns=["رمز المؤشر","اسم المؤشر","النسبة","الصفحة"])
 
 def tidy(df, source):
     data = df.copy()
@@ -146,14 +176,14 @@ if st.button("🔍 استخراج البيانات للمراجعة",type="prima
             st.session_state["a"]=a if len(a) else starter()
             st.session_state["b"]=b if len(b) else starter()
             st.session_state["weak"]=(aw,bw)
-        st.success("اكتملت محاولة القراءة. راجعي الأرقام أدناه قبل عرض أي مقارنة.")
+        st.info(f"انتهت محاولة القراءة: الذاتي {len(a)} صفًا، والخارجي {len(b)} صفًا. الأرقام أولية وتحتاج تدقيقًا.")
 if "a" not in st.session_state:
     st.info("ارفعي التقريرين، ثم اضغطي استخراج البيانات. يمكن إدخال النسب يدويًا عندما تكون صفحات PDF مصورة.")
     st.stop()
 
 aw,bw=st.session_state["weak"]
 if aw or bw:
-    st.warning("توجد صفحات تحتاج قراءة ضوئية OCR: الذاتي "+str(aw)+"، الخارجي "+str(bw)+". لن نخمن قيمها. أكملي البيانات من التقرير الأصلي يدويًا.")
+    st.warning("الصفحات المصورة لا يمكن قراءتها تلقائيًا بهذا الإصدار: الذاتي "+str(aw)+"، الخارجي "+str(bw)+". أكملي بياناتها من التقرير أو حمّلي جدول Excel للمراجعة. لا تُحسب الصفحات المفقودة صفرًا.")
 st.markdown('<div class="section">✏️ تدقيق بيانات المؤشرات</div>',unsafe_allow_html=True)
 st.caption("راجعي رمز المؤشر ونسبته وصفحته. أي مؤشر غير موجود في أحد التقريرين سيظهر غير مكتمل ولن يُحسب له فرق.")
 ta,tb=st.tabs(["📘 التقويم الذاتي","📗 التقويم الخارجي"])
@@ -161,15 +191,15 @@ with ta:
     a=st.data_editor(st.session_state["a"],num_rows="dynamic",hide_index=True,use_container_width=True,key="edit_a")
 with tb:
     b=st.data_editor(st.session_state["b"],num_rows="dynamic",hide_index=True,use_container_width=True,key="edit_b")
-c,da,db=compare(a,b)
+c,da,db=compare(a,b)\nif c.empty:\n    st.error("لم تُستخرج مؤشرات قابلة للمقارنة. التقرير المصور يحتاج OCR عربي أو إدخال القيم يدويًا؛ لا توجد نتائج صفرية.")
 if da or db:
     st.error("رموز مكررة استُبعدت لحماية دقة النتائج. الذاتي: "+str(da)+" | الخارجي: "+str(db))
 complete=c.dropna(subset=["الذاتي %","الخارجي %"])
 m1,m2,m3,m4=st.columns(4)
-m1.metric("إجمالي الرموز",len(c))
-m2.metric("مؤشرات مكتملة",len(complete))
-m3.metric("الذاتي أعلى",int((c["الحالة"]=="الذاتي أعلى").sum()))
-m4.metric("الخارجي أعلى",int((c["الحالة"]=="الخارجي أعلى").sum()))
+m1.metric("الرموز المستخرجة",len(c) if len(c) else "لا توجد بيانات")
+m2.metric("مؤشرات قابلة للمقارنة",len(complete) if len(complete) else "غير متاحة")
+m3.metric("الذاتي أعلى",int((c["الحالة"]=="الذاتي أعلى").sum()) if len(complete) else "غير متاح")
+m4.metric("الخارجي أعلى",int((c["الحالة"]=="الخارجي أعلى").sum()) if len(complete) else "غير متاح")
 
 if view=="🏠 الرئيسية":
     st.markdown('<div class="section">🏠 ملخص لوحة التحكم</div>',unsafe_allow_html=True)
